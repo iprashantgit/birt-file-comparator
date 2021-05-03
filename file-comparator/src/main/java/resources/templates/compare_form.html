@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="ISO-8859-1">
+<title>File Comparison</title>
+<style type="text/css">
+    label {
+        display: inline-block;
+        width: 200px;
+        margin: 5px;
+        text-align: left;
+    }
+    input[type=text], input[type=password], select {
+        display: inline-block;
+        width: 200px;
+    }
+    input[type=radio] {
+        margin-left: 45px;
+    }
+    input[type=checkbox] {
+        margin-right: 190px;
+    }  
+    button {
+        padding: 5px;
+        margin: 10px;
+    }
+</style>
+</head>
+<body>
+
+<div align="center">
+    <h1>File Comparison</h1>
+    <form action="#" th:action="@{/compare}" method="post" th:object="${compareMetadata}">
+        <label>File 1 Location:</label>
+        <input type="text" th:field="*{filepath1}" /><br/>
+ 
+        <label>File 2 Location:</label>
+        <input type="text" th:field="*{filepath2}" /><br/>
+ 
+        <label>File Type:</label>
+        <select th:field="*{filetype}">
+            <option th:each="f : ${listFileTypes}" th:value="${f}" th:text="${f}" />
+        </select>
+        <br/>
+ 
+        <button type="submit">Compare</button>    
+    </form>
+</div>
+
+</body>
+
+</html>

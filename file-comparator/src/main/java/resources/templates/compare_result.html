@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="ISO-8859-1">
+<title>Comparison Results</title>
+<style type="text/css">
+    span {
+        display: inline-block;
+        width: 200px;
+        text-align: left;
+    }
+</style>
+</head>
+<body>
+<div align="center">
+    <h2>Compare Results!</h2>
+    <span>File 1 Location:</span><span th:text="${compareMetadata.filepath1}"></span><br/>
+    <span>File 2 Location:</span><span th:text="${compareMetadata.filepath2}"></span><br/>
+    <span>File Type:</span><span th:text="${compareMetadata.filetype}"></span><br/>
+</div>
+
+<a href="/result">Click here to compare</a>
+
+</body>
+</html>
