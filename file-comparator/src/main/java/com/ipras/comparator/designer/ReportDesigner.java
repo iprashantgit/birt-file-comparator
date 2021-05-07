@@ -138,7 +138,7 @@ public class ReportDesigner {
 
 		text = elementFactory.newTextItem(null);
 		text.setProperty("contentType", "HTML");
-		text.setContent("<a href=\"/restart\">Click here to Return Home</a>");
+		text.setContent("<a href=\"/restart\">Click here to Reset Application and Compare</a>");
 		design.getBody().add(text);
 
 		SimpleMasterPageHandle masterPage = elementFactory.newSimpleMasterPage("Master Page");

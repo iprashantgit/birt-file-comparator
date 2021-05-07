@@ -42,6 +42,8 @@ public class CompareController {
 	ExcelComparator excelComparator = context.getBean(ExcelComparator.class);
 	TextComparator textComparator = context.getBean(TextComparator.class);
 
+	String outputType = "xlsx";
+
 	@GetMapping(value = "/compare")
 	public String compare(Model model) {
 		CompareMetadata compareMetadata = new CompareMetadata();
@@ -77,15 +79,24 @@ public class CompareController {
 	public void generateFullReport(HttpServletResponse response, HttpServletRequest request)
 			throws EncryptedDocumentException, InvalidFormatException, BirtException, IOException {
 
-		reportService.generateMainReport(design, response, request);
+		reportService.generateMainReport(design, response, request, outputType);
 
 	}
 
 	@GetMapping("/restart")
-	@ResponseBody
 	public String restart() {
-		FileComparatorApplication.restart();
-		return "/";
+		Thread restartThread = new Thread(() -> {
+			try {
+				Thread.sleep(1000);
+				FileComparatorApplication.restart();
+			} catch (InterruptedException ignored) {
+			}
+		});
+		restartThread.setDaemon(false);
+		restartThread.start();
+		// FileComparatorApplication.restart();
+		// return "/";
+		return "restart_success";
 	}
 
 }

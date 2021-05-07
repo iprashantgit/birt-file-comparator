@@ -1,12 +1,13 @@
 package com.ipras.comparator.compare;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
+import org.apache.commons.text.diff.StringsComparator;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.eclipse.birt.core.exception.BirtException;
@@ -21,13 +22,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.ipras.comparator.designer.ReportDesigner;
 
-public class TextComparator{
+public class TextComparator {
 
 	@Autowired
 	private ReportDesigner reportDesigner;
 
 	private String sourcePath1;
 	private String sourcePath2;
+
+	private ReportDesignHandle design;
+	private ElementFactory factory;
+	int summaryGridRowCount = 1;
 
 	public String getSourcePath1() {
 		return sourcePath1;
@@ -44,11 +49,7 @@ public class TextComparator{
 	public void setSourcePath2(String sourcePath2) {
 		this.sourcePath2 = sourcePath2;
 	}
-	
-	private ReportDesignHandle design;
-	private ElementFactory factory;
-	int summaryGridRowCount = 1;
-	
+
 	public ReportDesignHandle compareText()
 			throws BirtException, EncryptedDocumentException, InvalidFormatException, IOException {
 
@@ -81,9 +82,7 @@ public class TextComparator{
 			return design;
 		}
 
-		
-		compare(file1, file2);
-
+		compare();
 
 		if (summaryGridRowCount == 1) {
 			addNoDiscrepancyFound();
@@ -93,60 +92,56 @@ public class TextComparator{
 
 		return design;
 	}
-	
-	private void compare(FileInputStream file1, FileInputStream file2) throws SemanticException, IOException {
 
-		// new code
-		BufferedReader reader1 = new BufferedReader(new FileReader(sourcePath1));
-        
-        BufferedReader reader2 = new BufferedReader(new FileReader(sourcePath2));
-         
-        String line1 = reader1.readLine();
-         
-        String line2 = reader2.readLine();
-         
-        boolean areEqual = true;
-         
-        int lineNum = 1;
-         
-        while (line1 != null || line2 != null)
-        {
-            if(line1 == null || line2 == null)
-            {
-                areEqual = false;
-                 
-                break;
-            }
-            else if(! line1.equalsIgnoreCase(line2))
-            {
-                areEqual = false;
-                
-                addLineMismatch(lineNum, line1, line2);
-                
-                break;
-            }
-             
-            line1 = reader1.readLine();
-             
-            line2 = reader2.readLine();
-             
-            lineNum++;
-        }
-         
-        if(areEqual)
-        {
-            System.out.println("Two files have same content.");
-        }
-        else
-        {
-            System.out.println("Two files have different content. They differ at line "+lineNum);
-             
-            System.out.println("File1 has "+line1+" and File2 has "+line2+" at line "+lineNum);
-        }
-         
-        reader1.close();
-         
-        reader2.close();
+	private void compare() throws IOException, SemanticException {
+
+		// Read both files with line iterator.
+		LineIterator file1 = FileUtils.lineIterator(new File(sourcePath1), "utf-8");
+		LineIterator file2 = FileUtils.lineIterator(new File(sourcePath2), "utf-8");
+
+		int lineNum = 0;
+
+		// Initialize visitor.
+		FileCommandsVisitor fileCommandsVisitor = new FileCommandsVisitor();
+
+		// Read file line by line so that comparison can be done line by line.
+		while (file1.hasNext() || file2.hasNext()) {
+			/*
+			 * In case both files have different number of lines, fill in with empty
+			 * strings. Also append newline char at end so next line comparison moves to
+			 * next line.
+			 */
+			lineNum++;
+			fileCommandsVisitor = new FileCommandsVisitor();
+
+			String left = (file1.hasNext() ? file1.nextLine() : "") + "\n";
+			String right = (file2.hasNext() ? file2.nextLine() : "") + "\n";
+
+			// Prepare diff comparator with lines from both files.
+			StringsComparator comparator = new StringsComparator(left, right);
+
+			if (comparator.getScript().getLCSLength() > (Integer.max(left.length(), right.length()) * 0.4)) {
+				/*
+				 * If both lines have atleast 40% commonality then only compare with each other
+				 * so that they are aligned with each other in final diff HTML.
+				 */
+
+				comparator.getScript().visit(fileCommandsVisitor);
+				addLineMismatch(lineNum, fileCommandsVisitor.left, fileCommandsVisitor.right);
+			} else {
+				/*
+				 * If both lines do not have 40% commanlity then compare each with empty line so
+				 * that they are not aligned to each other in final diff instead they show up on
+				 * separate lines.
+				 */
+				StringsComparator leftComparator = new StringsComparator(left, "\n");
+				leftComparator.getScript().visit(fileCommandsVisitor);
+				StringsComparator rightComparator = new StringsComparator("\n", right);
+				rightComparator.getScript().visit(fileCommandsVisitor);
+				addLineMismatch(lineNum, fileCommandsVisitor.left, fileCommandsVisitor.right);
+			}
+		}
+
 	}
 
 	private void addNoDiscrepancyFound() throws SemanticException {
@@ -160,42 +155,178 @@ public class TextComparator{
 		design.getBody().add(text);
 	}
 
-	
-	private void addLineMismatch(int lineNum, String line1, String line2)
-			throws SemanticException {
-		summaryGridRowCount++;
+	private void addLineMismatch(int lineNum, String left, String right) throws SemanticException {
 
 		GridHandle grid = (GridHandle) design.findElement("SummaryGrid");
-		RowOperationParameters rowParam = new RowOperationParameters(1, 0, summaryGridRowCount - 1);
-		grid.insertRow(rowParam);
 
-		CellHandle cell = grid.getCell(summaryGridRowCount, 1);
-		TextItemHandle serialNo = factory.newTextItem(null);
-		serialNo.setContent(Integer.toString(summaryGridRowCount - 1));
-		cell.getContent().add(serialNo);
+		// create text for left
 
-		cell = grid.getCell(summaryGridRowCount, 2);
-		TextItemHandle lineNumText = factory.newTextItem(null);
-		lineNumText.setContent("Line Number " + lineNum);
-		cell.getContent().add(lineNumText);
+		int leftTextHeight = 0;
 
-		cell = grid.getCell(summaryGridRowCount, 3);
-		TextItemHandle mismatchType = factory.newTextItem(null);
-		mismatchType.setContent("Value Mismatch");
-		cell.getContent().add(mismatchType);
+		if (left.indexOf('<') == -1) {
 
-		cell = grid.getCell(summaryGridRowCount, 4);
-		TextItemHandle line1Text = factory.newTextItem(null);
-		line1Text.setContent(line1);
-		cell.getContent().add(line1Text);
+			summaryGridRowCount++;
 
-		cell = grid.getCell(summaryGridRowCount, 5);
-		TextItemHandle line2Text = factory.newTextItem(null);
-		line2Text.setContent(line2);
-		cell.getContent().add(line2Text);
+			RowOperationParameters rowParam = new RowOperationParameters(1, 0, summaryGridRowCount - 1);
+			grid.insertRow(rowParam);
+
+			CellHandle cell = grid.getCell(summaryGridRowCount, 1);
+			TextItemHandle serialNo = factory.newTextItem(null);
+			serialNo.setContent(Integer.toString(summaryGridRowCount - 1));
+			cell.getContent().add(serialNo);
+
+			cell = grid.getCell(summaryGridRowCount, 2);
+			TextItemHandle lineNumText = factory.newTextItem(null);
+			lineNumText.setContent("Line Number " + lineNum);
+			cell.getContent().add(lineNumText);
+
+			cell = grid.getCell(summaryGridRowCount, 3);
+			TextItemHandle mismatchType = factory.newTextItem(null);
+			mismatchType.setContent("Value Mismatch");
+			cell.getContent().add(mismatchType);
+
+			cell = grid.getCell(summaryGridRowCount, 4);
+			TextItemHandle leftText = factory.newTextItem(null);
+			leftText.setContent(left);
+			cell.getContent().add(leftText);
+
+		} else {
+
+			int beginIndex = 0;
+
+			while (left.length() > 0) {
+
+				if (left.indexOf('<') == -1) {
+
+					summaryGridRowCount++;
+					leftTextHeight++;
+
+					System.out.println(left);
+
+					RowOperationParameters rowParam = new RowOperationParameters(1, 0, summaryGridRowCount - 1);
+					grid.insertRow(rowParam);
+
+					CellHandle cell = grid.getCell(summaryGridRowCount, 4);
+
+					TextItemHandle leftText = factory.newTextItem(null);
+					leftText.setContent(left);
+					cell.getContent().add(leftText);
+
+					break;
+
+				} else {
+
+					int index = left.indexOf('<');
+
+					System.out.println(beginIndex + "---" + index);
+					System.out.println(left);
+
+					summaryGridRowCount++;
+					leftTextHeight++;
+
+					RowOperationParameters rowParam = new RowOperationParameters(1, 0, summaryGridRowCount - 1);
+					grid.insertRow(rowParam);
+
+					if (leftTextHeight == 1) {
+						CellHandle cell = grid.getCell(summaryGridRowCount, 1);
+						TextItemHandle serialNo = factory.newTextItem(null);
+						serialNo.setContent(Integer.toString(summaryGridRowCount - 1));
+						cell.getContent().add(serialNo);
+
+						cell = grid.getCell(summaryGridRowCount, 2);
+						TextItemHandle lineNumText = factory.newTextItem(null);
+						lineNumText.setContent("Line Number " + lineNum);
+						cell.getContent().add(lineNumText);
+
+						cell = grid.getCell(summaryGridRowCount, 3);
+						TextItemHandle mismatchType = factory.newTextItem(null);
+						mismatchType.setContent("Value Mismatch");
+						cell.getContent().add(mismatchType);
+					}
+
+					CellHandle cell = grid.getCell(summaryGridRowCount, 4);
+
+					TextItemHandle leftText = factory.newTextItem(null);
+					leftText.setContent(left.substring(beginIndex, index));
+					cell.getContent().add(leftText);
+
+					summaryGridRowCount++;
+					leftTextHeight++;
+
+					rowParam = new RowOperationParameters(1, 0, summaryGridRowCount - 1);
+					grid.insertRow(rowParam);
+
+					cell = grid.getCell(summaryGridRowCount, 4);
+					cell.setOnRender("this.getStyle().backgroundColor=\"green\";");
+
+					leftText = factory.newTextItem(null);
+					leftText.setContent(left.substring(index + 1, index + 2));
+					cell.getContent().add(leftText);
+
+					beginIndex = index + 2;
+					left = left.substring(beginIndex, left.length());
+				}
+
+			}
+		}
+
+		// create text for right
+		int rightTextHeight = 0;
+
+		if (right.indexOf('<') == -1) {
+
+			CellHandle cell = grid.getCell(summaryGridRowCount, 5);
+
+			TextItemHandle rightText = factory.newTextItem(null);
+			rightText.setContent(right);
+			cell.getContent().add(rightText);
+
+		} else {
+			int beginIndex = 0;
+
+			while (right.length() > 0) {
+
+				if (right.indexOf('<') == -1) {
+
+					rightTextHeight++;
+					CellHandle cell = grid.getCell(summaryGridRowCount - (leftTextHeight - rightTextHeight), 5);
+
+					TextItemHandle rightText = factory.newTextItem(null);
+					rightText.setContent(right);
+					cell.getContent().add(rightText);
+
+					break;
+
+				} else {
+
+					int index = right.indexOf('<');
+
+					System.out.println(beginIndex + "---" + index);
+					System.out.println(right);
+
+					TextItemHandle rightText = factory.newTextItem(null);
+					rightText.setContent(right.substring(beginIndex, index));
+					rightTextHeight++;
+					CellHandle cell = grid.getCell(summaryGridRowCount - (leftTextHeight - rightTextHeight), 5);
+					cell.getContent().add(rightText);
+
+					rightTextHeight++;
+					cell = grid.getCell(summaryGridRowCount - (leftTextHeight - rightTextHeight), 5);
+					cell.setOnRender("this.getStyle().backgroundColor=\"red\";");
+
+					rightText = factory.newTextItem(null);
+					rightText.setContent(right.substring(index + 1, index + 2));
+
+					cell.getContent().add(rightText);
+
+					beginIndex = index + 2;
+					right = right.substring(beginIndex, right.length());
+				}
+			}
+		}
 
 	}
-	
+
 	private void fileNotFoundMismatch(int[] fileNotFound) throws SemanticException {
 
 		GridHandle paramGrid = (GridHandle) design.findElement("SummaryGrid");
@@ -218,7 +349,7 @@ public class TextComparator{
 		addStyleSheet();
 
 	}
-	
+
 	private void addInputParameters() throws SemanticException {
 
 		GridHandle grid = (GridHandle) design.findElement("ParameterGrid");
@@ -234,7 +365,7 @@ public class TextComparator{
 		cell.getContent().add(source2);
 
 	}
-	
+
 	private void addStyleSheet() throws SemanticException {
 
 		// add style to title
@@ -272,5 +403,5 @@ public class TextComparator{
 		}
 
 	}
-	
+
 }
