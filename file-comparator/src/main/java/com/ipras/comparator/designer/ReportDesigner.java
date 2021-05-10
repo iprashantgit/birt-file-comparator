@@ -103,7 +103,7 @@ public class ReportDesigner {
 					"Source 1", "Source 2" };
 			headers = header;
 		} else if (inputType.equals("plain-text")) {
-			String[] header = { "S.No.", "Line Number", "Mismatch Type", "Source 1", "Source 2" };
+			String[] header = { "S.No.", "Mismatch Type", "Row Number", "Column Number", "Source 1", "Source 2" };
 			headers = header;
 		}
 
@@ -136,10 +136,12 @@ public class ReportDesigner {
 		lineBreak.setContent("<br>");
 		design.getBody().add(lineBreak);
 
-		text = elementFactory.newTextItem(null);
-		text.setProperty("contentType", "HTML");
-		text.setContent("<a href=\"/restart\">Click here to Reset Application and Compare</a>");
-		design.getBody().add(text);
+		if (inputType.equals("HTML")) {
+			text = elementFactory.newTextItem(null);
+			text.setProperty("contentType", "HTML");
+			text.setContent("<a href=\"/restart\">Click here to Reset Application and Compare</a>");
+			design.getBody().add(text);
+		}
 
 		SimpleMasterPageHandle masterPage = elementFactory.newSimpleMasterPage("Master Page");
 		masterPage.setPageType("custom");

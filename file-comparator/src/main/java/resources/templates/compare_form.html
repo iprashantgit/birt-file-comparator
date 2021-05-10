@@ -42,6 +42,15 @@
             <option th:each="f : ${listFileTypes}" th:value="${f}" th:text="${f}" />
         </select>
         <br/>
+        
+        <label>Delimiter (only for plain-text):</label>
+ 		<input type="text" th:field="*{delimiter}" /><br/>
+ 		
+ 		<label>Output Type:</label>
+ 		<select th:field="*{outputType}">
+            <option th:each="o : ${listOutputTypes}" th:value="${o}" th:text="${o}" />
+        </select>
+        <br/>
  
         <button type="submit">Compare</button>    
     </form>

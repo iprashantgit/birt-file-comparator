@@ -13,10 +13,13 @@
 </head>
 <body>
 <div align="center">
-    <h2>Compare Results!</h2>
+    <h2>Your inputs are:</h2>
     <span>File 1 Location:</span><span th:text="${compareMetadata.filepath1}"></span><br/>
     <span>File 2 Location:</span><span th:text="${compareMetadata.filepath2}"></span><br/>
     <span>File Type:</span><span th:text="${compareMetadata.filetype}"></span><br/>
+    <span>Delimiter:</span><span th:text="${compareMetadata.delimiter}"></span><br/>
+    <span>File Type:</span><span th:text="${compareMetadata.outputType}"></span><br/>
+    
 </div>
 
 <a href="/result">Click here to compare</a>

@@ -38,19 +38,23 @@ public class CompareController {
 	private BirtReportService reportService;
 
 	public ReportDesignHandle design;
+	
+	private String outputType;
 
 	ExcelComparator excelComparator = context.getBean(ExcelComparator.class);
 	TextComparator textComparator = context.getBean(TextComparator.class);
-
-	String outputType = "xlsx";
 
 	@GetMapping(value = "/compare")
 	public String compare(Model model) {
 		CompareMetadata compareMetadata = new CompareMetadata();
 		model.addAttribute("compareMetadata", compareMetadata);
 
-		List<String> listFileTypes = Arrays.asList("xlsx", "plain-text");
+		List<String> listFileTypes = Arrays.asList("plain-text", "xlsx");
 		model.addAttribute("listFileTypes", listFileTypes);
+		
+		List<String> listOutputTypes = Arrays.asList("xlsx", "html");
+		model.addAttribute("listOutputTypes", listOutputTypes);
+		
 
 		return "compare_form";
 	}
@@ -68,8 +72,11 @@ public class CompareController {
 		if (compareMetadata.getFiletype().equals("plain-text")) {
 			textComparator.setSourcePath1(compareMetadata.getFilepath1());
 			textComparator.setSourcePath2(compareMetadata.getFilepath2());
+			textComparator.setDelimiter(compareMetadata.getDelimiter());
 			design = textComparator.compareText();
 		}
+		
+		outputType = compareMetadata.getOutputType();
 
 		return "compare_result";
 	}

@@ -5,16 +5,20 @@ public class CompareMetadata {
 	private String filepath1;
 	private String filepath2;
 	private String filetype;
+	private String delimiter;
+	private String outputType;
 
-	public CompareMetadata(String filepath1, String filepath2, String filetype) {
+	public CompareMetadata() {
+
+	}
+
+	public CompareMetadata(String filepath1, String filepath2, String filetype, String delimiter, String outputType) {
 		super();
 		this.filepath1 = filepath1;
 		this.filepath2 = filepath2;
 		this.filetype = filetype;
-	}
-
-	public CompareMetadata() {
-
+		this.delimiter = delimiter;
+		this.outputType = outputType;
 	}
 
 	public String getFilepath1() {
@@ -41,46 +45,20 @@ public class CompareMetadata {
 		this.filetype = filetype;
 	}
 
-	@Override
-	public String toString() {
-		return "CompareMetadata [filepath1=" + filepath1 + ", filepath2=" + filepath2 + ", filetype=" + filetype + "]";
+	public String getDelimiter() {
+		return delimiter;
 	}
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((filepath1 == null) ? 0 : filepath1.hashCode());
-		result = prime * result + ((filepath2 == null) ? 0 : filepath2.hashCode());
-		result = prime * result + ((filetype == null) ? 0 : filetype.hashCode());
-		return result;
+	public void setDelimiter(String delimiter) {
+		this.delimiter = delimiter;
 	}
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		CompareMetadata other = (CompareMetadata) obj;
-		if (filepath1 == null) {
-			if (other.filepath1 != null)
-				return false;
-		} else if (!filepath1.equals(other.filepath1))
-			return false;
-		if (filepath2 == null) {
-			if (other.filepath2 != null)
-				return false;
-		} else if (!filepath2.equals(other.filepath2))
-			return false;
-		if (filetype == null) {
-			if (other.filetype != null)
-				return false;
-		} else if (!filetype.equals(other.filetype))
-			return false;
-		return true;
+	public String getOutputType() {
+		return outputType;
+	}
+
+	public void setOutputType(String outputType) {
+		this.outputType = outputType;
 	}
 
 }
